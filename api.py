@@ -1,4 +1,5 @@
 from flask import Flask
+import subprocess
 from flask_restful import Resource, Api, reqparse, abort, marshal, fields
 from configparser import ConfigParser
 import psycopg2 as pg
@@ -12,6 +13,7 @@ def create_app():
     health = HealthCheck()
     envdump = EnvironmentDump()
     health.add_check(check_database_connection)
+    health.add_check(test_microservice)
     envdump.add_section("application", application_data)
     app.add_url_rule("/healthcheck", "healthcheck", view_func=lambda: health.run())
     app.add_url_rule("/environment", "environment", view_func=lambda: envdump.run())
@@ -20,14 +22,24 @@ def create_app():
 
     return app
 
+def test_microservice():
+    result = subprocess.Popen('python api_test.py', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+    if 'OK' in str(stderr):
+        return True, "Microservice healthy"
+    else:
+        return False, "Microservice sick"
+
 def check_database_connection():
     conn = pg.connect('')
     if conn.poll() == extensions.POLL_OK:
         print ("POLL: POLL_OK")
-    if conn.poll() == extensions.POLL_READ:
+    elif conn.poll() == extensions.POLL_READ:
         print ("POLL: POLL_READ")
-    if conn.poll() == extensions.POLL_WRITE:
+    elif conn.poll() == extensions.POLL_WRITE:
         print ("POLL: POLL_WRITE")
+    else:
+        return False, "Connection with database lost"
     return True, "Database connection OK"
 
 def application_data():
