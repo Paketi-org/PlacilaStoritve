@@ -1,4 +1,5 @@
 from flask import Flask
+import logging
 import subprocess
 from flask_restful import Resource, Api, reqparse, abort, marshal, fields
 from configparser import ConfigParser
@@ -7,6 +8,8 @@ from healthcheck import HealthCheck, EnvironmentDump
 from prometheus_flask_exporter import PrometheusMetrics
 
 def create_app():
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+    logger = logging.getLogger(__name__)
     app = Flask(__name__)
     api = Api(app)
     metrics = PrometheusMetrics(app)
@@ -26,9 +29,9 @@ def test_microservice():
     result = subprocess.Popen('python api_test.py', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
     if 'OK' in str(stderr):
-        return True, "Microservice healthy"
+        return 200
     else:
-        return False, "Microservice sick"
+        return 409
 
 def check_database_connection():
     conn = pg.connect('')
@@ -39,8 +42,8 @@ def check_database_connection():
     elif conn.poll() == extensions.POLL_WRITE:
         print ("POLL: POLL_WRITE")
     else:
-        return False, "Connection with database lost"
-    return True, "Database connection OK"
+        return 409
+    return 200
 
 def application_data():
     return {"maintainer": "Teodor Janez Podobnik",
