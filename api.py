@@ -110,10 +110,10 @@ class ListPlacil(Resource):
                            status CHAR(10)
                         )''')
         self.parser = reqparse.RequestParser()
-        self.parser.add_argument("id", type=int)
-        self.parser.add_argument("id_placnika", type=int)
-        self.parser.add_argument("id_prejemnika", type=int)
-        self.parser.add_argument("status", type=str, help="status dostave")
+        self.parser.add_argument("id", type=int, required=True, help="ID plačila je obvezen")
+        self.parser.add_argument("id_placnika", type=int, required=True, help="ID plačnika je obvezen")
+        self.parser.add_argument("id_prejemnika", type=int, required=True, help="ID prejemnika je obvezen")
+        self.parser.add_argument("status", type=str, required=True, help="Status plačila je obvezen")
 
     def get(self):
         self.cur.execute("SELECT * FROM placila")
