@@ -7,6 +7,9 @@ name = "pypi"
 flask = "*"
 flask-restful = "*"
 psycopg2-binary = "*"
+py-healthcheck = "*"
+prometheus-flask-exporter = "*"
+python-dotenv = "*"
 
 [dev-packages]
 

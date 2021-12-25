@@ -1,10 +1,11 @@
 import requests
 
-BASE = "http://192.168.1.25:5000/"
+BASE = "http://172.25.1.5:5002/"
 
 r1 = requests.get(BASE + "/placila")
 print(r1.json())
 
+'''
 r4 = requests.post(BASE + "/placila", {"id": 1, "id_placnika": 2, "id_prejemnika": 3, "status": "neplacano"})
 #print(r4.json())
 
@@ -30,3 +31,4 @@ print(r3.json())
 
 r6 = requests.get(BASE + "/placila/2")
 print(r6.json())
+'''

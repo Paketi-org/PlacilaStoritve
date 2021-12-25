@@ -2,9 +2,37 @@ from flask import Flask
 from flask_restful import Resource, Api, reqparse, abort, marshal, fields
 from configparser import ConfigParser
 import psycopg2 as pg
+from healthcheck import HealthCheck, EnvironmentDump
+from prometheus_flask_exporter import PrometheusMetrics
 
-app = Flask(__name__)
-api = Api(app)
+def create_app():
+    app = Flask(__name__)
+    api = Api(app)
+    metrics = PrometheusMetrics(app)
+    health = HealthCheck()
+    envdump = EnvironmentDump()
+    health.add_check(check_database_connection)
+    envdump.add_section("application", application_data)
+    app.add_url_rule("/healthcheck", "healthcheck", view_func=lambda: health.run())
+    app.add_url_rule("/environment", "environment", view_func=lambda: envdump.run())
+    api.add_resource(ListPlacil, "/placila")
+    api.add_resource(Placilo, "/placila/<int:id>")
+
+    return app
+
+def check_database_connection():
+    conn = pg.connect('')
+    if conn.poll() == extensions.POLL_OK:
+        print ("POLL: POLL_OK")
+    if conn.poll() == extensions.POLL_READ:
+        print ("POLL: POLL_READ")
+    if conn.poll() == extensions.POLL_WRITE:
+        print ("POLL: POLL_WRITE")
+    return True, "Database connection OK"
+
+def application_data():
+    return {"maintainer": "Teodor Janez Podobnik",
+            "git_repo": "https://github.com/Paketi-org/PlacilaStoritve.git"}
 
 placilaPolja = {
     "id": fields.Integer,
@@ -14,32 +42,20 @@ placilaPolja = {
 }
 
 class Placilo(Resource):
-    def __init__(self, config_file='database.ini', section='postgresql'):
+    def __init__(self):
         self.table_name = 'placila'
-        self.db = self.get_config(config_file, section)
-        self.conn = pg.connect(**self.db)
+        self.conn = pg.connect('')
         self.cur = self.conn.cursor()
 
         self.parser = reqparse.RequestParser()
         self.parser.add_argument("id", type=int)
         self.parser.add_argument("id_placnika", type=int)
         self.parser.add_argument("id_prejemnika", type=int)
-        self.parser.add_argument("status", type=int)
+        self.parser.add_argument("status", type=str)
+        self.parser.add_argument("atribut", type=str)
+        self.parser.add_argument("vrednost", type=str)
 
         super(Placilo, self).__init__()
-
-    def get_config(self, config_file, section):
-        self.parser = ConfigParser()
-        self.parser.read(config_file)
-        db = {}
-        if self.parser.has_section(section):
-            params = self.parser.items(section)
-            for param in params:
-                db[param[0]] = param[1]
-        else:
-            raise Exception('Section {0} not found in the {1} file'.format(section, config_file))
-
-        return db
 
     def get(self, id):
         self.cur.execute("SELECT * FROM placila WHERE id = %s" % str(id))
@@ -53,6 +69,15 @@ class Placilo(Resource):
             d[k] = el
 
         return{"placilo": marshal(d, placilaPolja)}
+
+    def put(self, id):
+        args = self.parser.parse_args()
+        attribute = args["atribut"]
+        value = args["vrednost"]
+        self.cur.execute("""UPDATE {0} SET {1} = '{2}' WHERE id = {3}""".format(self.table_name, attribute, value, id))
+        self.conn.commit()
+
+        return 200
 
     def delete(self, id):
         self.cur.execute("SELECT * FROM placila")
@@ -70,10 +95,9 @@ class Placilo(Resource):
         return 201
 
 class ListPlacil(Resource):
-    def __init__(self, config_file='database.ini', section='postgresql'):
+    def __init__(self):
         self.table_name = 'placila'
-        self.db = self.get_config(config_file, section)
-        self.conn = pg.connect(**self.db)
+        self.conn = pg.connect('')
         self.cur = self.conn.cursor()
         self.cur.execute("select exists(select * from information_schema.tables where table_name=%s)", (self.table_name,))
         if self.cur.fetchone()[0]:
@@ -90,19 +114,6 @@ class ListPlacil(Resource):
         self.parser.add_argument("id_placnika", type=int)
         self.parser.add_argument("id_prejemnika", type=int)
         self.parser.add_argument("status", type=str, help="status dostave")
-
-    def get_config(self, config_file, section):
-        self.parser = ConfigParser()
-        self.parser.read(config_file)
-        db = {}
-        if self.parser.has_section(section):
-            params = self.parser.items(section)
-            for param in params:
-                db[param[0]] = param[1]
-        else:
-            raise Exception('Section {0} not found in the {1} file'.format(section, config_file))
-
-        return db
 
     def get(self):
         self.cur.execute("SELECT * FROM placila")
@@ -135,8 +146,6 @@ class ListPlacil(Resource):
         return{"placilo": marshal(placilo, placilaPolja)}, 201
 
 
-api.add_resource(ListPlacil, "/placila")
-api.add_resource(Placilo, "/placila/<int:id>")
-
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app = create_app()
+    app.run(host="0.0.0.0", port=5002)
