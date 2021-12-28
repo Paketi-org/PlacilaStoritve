@@ -10,6 +10,11 @@ psycopg2-binary = "*"
 py-healthcheck = "*"
 prometheus-flask-exporter = "*"
 python-dotenv = "*"
+fluent-logger = "*"
+flask-restx = "*"
+grpcio = "*"
+flask-unittest = "*"
+grpcio-tools = "*"
 
 [dev-packages]
 
