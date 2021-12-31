@@ -45,7 +45,7 @@ def connect_to_database():
                       port=app.config["DATABASE_PORT"], host=app.config["DATABASE_IP"])
 
 
-api = Api(app, version='1.0', title='Placila API', description='Abstrakt Placila API',default_swagger_filename='openapi.json', default='Placila CRUD', default_label='koncne tocke in operacije')
+api = Api(app, version='1.0', doc='/openapi', title='Placila API', description='Abstrakt Placila API',default_swagger_filename='openapi.json', default='Placila CRUD', default_label='koncne tocke in operacije')
 placiloApiModel = api.model('ModelPlacila', {
     "id": fields.Integer(readonly=True, description='ID placila'),
     "id_placnika": fields.Integer(readonly=True, description='ID placnika placila'),
