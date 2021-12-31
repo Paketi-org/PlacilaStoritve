@@ -13,8 +13,9 @@ class UnaryService(pb2_grpc.convertToCryptoServicer):
     def convertToBitcoin(self, request, context):
 
         # get the string from the incoming request
-        message = request.message
-        result = f'Hello I am up and running received "{message}" message from you'
+        eur = request.message
+        bitcoin = str(0.000024 * float(eur))
+        result = f'I received {eur} eurs and converted it to {bitcoin} bitcoins'
         result = {'message': result, 'received': True}
 
         return pb2.MessageResponse(**result)

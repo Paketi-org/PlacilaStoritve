@@ -19,16 +19,16 @@ class UnaryClient(object):
         # bind the client and the server
         self.stub = pb2_grpc.convertToCryptoStub(self.channel)
 
-    def get_url(self, message):
+    def get_bitcoins(self, eur):
         """
         Client function to call the rpc for GetServerResponse
         """
-        message = pb2.Message(message=message)
-        print(f'{message}')
+        message = pb2.Message(message=eur)
+        print(f'Sent request to convert {message} to bitcoins')
         return self.stub.convertToBitcoin(message)
 
 
 if __name__ == '__main__':
     client = UnaryClient()
-    result = client.get_url(message="Hello Server you there?")
-    print(f'{result}')
+    result = client.get_bitcoins("10.00")
+    print(f'Received from server {result}')
