@@ -39,7 +39,7 @@ custom_format = {
 }
 logging.basicConfig(level=logging.INFO)
 l = logging.getLogger('fluent.test')
-h = handler.FluentHandler('Placila', host=app.config["FLUENT_IP"], port=app.config["FLUENT_PORT"])
+h = handler.FluentHandler('Placila', host=app.config["FLUENT_IP"], port=int(app.config["FLUENT_PORT"]))
 formatter = handler.FluentRecordFormatter(custom_format)
 h.setFormatter(formatter)
 l.addHandler(h)
