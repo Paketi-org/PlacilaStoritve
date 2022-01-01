@@ -40,11 +40,6 @@ h.setFormatter(formatter)
 l.addHandler(h)
 l.info("Pripravljanje Placila Mikrostoritve", extra={"name_of_service": "Placila", "crud_method": None, "directions": None})
 
-def connect_to_database():
-    return pg.connect(database=app.config["DATABASE_NAME"], user=app.config["DATABASE_USER"], password=app.config["DATABASE_PASSWORD"],
-                      port=app.config["DATABASE_PORT"], host=app.config["DATABASE_IP"])
-
-
 api = Api(app, version='1.0', doc='/openapi', title='Placila API', description='Abstrakt Placila API',default_swagger_filename='openapi.json', default='Placila CRUD', default_label='koncne tocke in operacije')
 placiloApiModel = api.model('ModelPlacila', {
     "id": fields.Integer(readonly=True, description='ID placila'),
@@ -59,25 +54,11 @@ posodobiModel = api.model('PosodobiPlacilo', {
     "vrednost": fields.String
 })
 
-def create_app():
-    metrics = PrometheusMetrics(app)
-    health = HealthCheck()
-    envdump = EnvironmentDump()
-    health.add_check(check_database_connection)
-    health.add_check(test_microservice)
-    envdump.add_section("application", application_data)
-    app.add_url_rule("/healthcheck", "healthcheck", view_func=lambda: health.run())
-    app.add_url_rule("/environment", "environment", view_func=lambda: envdump.run())
-    api.add_resource(ListPlacil, "/placila")
-    api.add_resource(Placilo, "/placila/<int:id>")
+metrics = PrometheusMetrics(app)
 
-def test_microservice():
-    process = subprocess.Popen('python api_test.py', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = process.communicate()
-    if 'OK' in str(stderr):
-        return 200
-    else:
-        return 409
+def connect_to_database():
+    return pg.connect(database=app.config["PGDATABASE"], user=app.config["PGUSER"], password=app.config["PGPASSWORD"],
+                      port=app.config["DATABASE_PORT"], host=app.config["DATABASE_IP"])
 
 def check_database_connection():
     conn = connect_too_database()
@@ -278,7 +259,13 @@ class ListPlacil(Resource):
         return placilo, 201 
 
 
-if __name__ == "__main__":
-    create_app()
-    app.run(host="0.0.0.0", port=5002)
-    h.close()
+health = HealthCheck()
+envdump = EnvironmentDump()
+health.add_check(check_database_connection)
+envdump.add_section("application", application_data)
+app.add_url_rule("/healthcheck", "healthcheck", view_func=lambda: health.run())
+app.add_url_rule("/environment", "environment", view_func=lambda: envdump.run())
+api.add_resource(ListPlacil, "/placila")
+api.add_resource(Placilo, "/placila/<int:id>")
+app.run(host="0.0.0.0", port=5002)
+h.close()
