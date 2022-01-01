@@ -10,6 +10,9 @@ from prometheus_flask_exporter import PrometheusMetrics
 from fluent import handler
 import os
 import json
+import grpc
+import unary_pb2_grpc as pb2_grpc
+import unary_pb2 as pb2
 
 app = Flask(__name__)
 
@@ -50,6 +53,8 @@ placiloApiModel = api.model('ModelPlacila', {
     "id": fields.Integer(readonly=True, description='ID placila'),
     "id_placnika": fields.Integer(readonly=True, description='ID placnika placila'),
     "id_prejemnika": fields.Integer(readonly=True, description='ID prejemnika placila'),
+    "znesek_eur": fields.String(readonly=True, description='Znesek placila v EUR'),
+    "znesek_coin": fields.String(readonly=True, description='Znesek placila v bitcoin'),
     "status": fields.String(readonly=True, description='Status placila')
 })
 placilaApiModel = api.model('ModelPlacil', {"placila": fields.List(fields.Nested(placiloApiModel))})
@@ -58,8 +63,18 @@ posodobiModel = api.model('PosodobiPlacilo', {
     "atribut": fields.String,
     "vrednost": fields.String
 })
-
 metrics = PrometheusMetrics(app)
+
+grpc_channel = grpc.insecure_channel('{}:{}'.format(app.config["GRPC_SERVER_IP"], app.config["GRPC_SERVER_PORT"]))
+stub = pb2_grpc.convertToCryptoStub(grpc_channel)
+
+def get_bitcoins(eur):
+    """
+    Client function to call the rpc for GetServerResponse
+    """
+    message = pb2.Message(message=eur)
+    print(f'Sent request to convert {message} to bitcoins')
+    return stub.convertToBitcoin(message)
 
 def connect_to_database():
     return pg.connect(database=app.config["PGDATABASE"], user=app.config["PGUSER"], password=app.config["PGPASSWORD"],
@@ -82,16 +97,20 @@ def application_data():
             "git_repo": "https://github.com/Paketi-org/PlacilaStoritve.git"}
 
 class PlaciloModel:
-    def __init__(self, id, id_placnika, id_prejemnika, status):
+    def __init__(self, id, id_placnika, id_prejemnika, znesek_eur, znesek_coin, status):
         self.id = id
         self.id_placnika = id_placnika
         self.id_prejemnika = id_prejemnika
+        self. znesek_eur = znesek_eur
+        self. znesek_coin = znesek_coin
         self.status = status
 
 placilaPolja = {
     "id": fields.Integer,
     "id_placnika": fields.Integer,
     "id_prejemnika": fields.Integer,
+    "znesek_eur": fields.String,
+    "znesek_coin": fields.String,
     "status": fields.String,
 }
 
@@ -105,6 +124,8 @@ class Placilo(Resource):
         self.parser.add_argument("id", type=int)
         self.parser.add_argument("id_placnika", type=int)
         self.parser.add_argument("id_prejemnika", type=int)
+        self.parser.add_argument("znesek_eur", type=str)
+        self.parser.add_argument("znesek_coin", type=str)
         self.parser.add_argument("status", type=str)
         self.parser.add_argument("atribut", type=str)
         self.parser.add_argument("vrednost", type=str)
@@ -132,6 +153,8 @@ class Placilo(Resource):
             id = d["id"],
             id_placnika = d["id_placnika"],
             id_prejemnika = d["id_prejemnika"],
+            znesek_eur = d["znesek_eur"],
+            znesek_coin = d["znesek_coin"], 
             status = d["status"].strip())
 
         return placilo, 200
@@ -165,6 +188,8 @@ class Placilo(Resource):
             id = d["id"],
             id_placnika = d["id_placnika"],
             id_prejemnika = d["id_prejemnika"],
+            znesek_eur = d["znesek_eur"],
+            znesek_coin = d["znesek_coin"],
             status = d["status"].strip())
 
         return placilo, 200
@@ -203,12 +228,15 @@ class ListPlacil(Resource):
                            id INT NOT NULL,
                            id_placnika INT NOT NULL,
                            id_prejemnika INT NOT NULL,
+                           znesek_eur CHAR(10),
+                           znesek_coin CHAR(10),
                            status CHAR(10)
                         )''')
         self.parser = reqparse.RequestParser()
         self.parser.add_argument("id", type=int, required=True, help="ID plačila je obvezen")
         self.parser.add_argument("id_placnika", type=int, required=True, help="ID plačnika je obvezen")
         self.parser.add_argument("id_prejemnika", type=int, required=True, help="ID prejemnika je obvezen")
+        self.parser.add_argument("znesek_eur", type=str, required=True, help="Znesek plačila v EUR je obvezen")
         self.parser.add_argument("status", type=str, required=True, help="Status plačila je obvezen")
 
         super(ListPlacil, self).__init__(*args, **kwargs)
@@ -235,6 +263,8 @@ class ListPlacil(Resource):
                 id = ds[d]["id"],
                 id_placnika = ds[d]["id_placnika"],
                 id_prejemnika = ds[d]["id_prejemnika"],
+                znesek_eur = ds[d]["znesek_eur"].strip(),
+                znesek_coin = ds[d]["znesek_coin"].strip(),
                 status = ds[d]["status"].strip())
             placila.append(placilo)
 
@@ -251,14 +281,20 @@ class ListPlacil(Resource):
         values = []
         for a in args.values():
             values.append(a)
-        self.cur.execute('''INSERT INTO {0} (id, id_placnika, id_prejemnika, status)
-                VALUES ({1}, {2}, {3}, '{4}')'''.format('placila', *values))
+
+        bitcoins = str(get_bitcoins(args["znesek_eur"]))
+        bitcoins = bitcoins[10:17]
+        values.insert(4, bitcoins)
+        self.cur.execute('''INSERT INTO {0} (id, id_placnika, id_prejemnika, znesek_eur, znesek_coin, status)
+                VALUES ({1}, {2}, {3}, '{4}', '{5}', '{6}')'''.format('placila', *values))
         self.conn.commit()
 
         placilo = PlaciloModel(
             id = args["id"],
             id_placnika = args["id_placnika"],
             id_prejemnika = args["id_prejemnika"],
+            znesek_eur = args["znesek_eur"].strip(),
+            znesek_coin = bitcoins,
             status = args["status"].strip())
 
         return placilo, 201 
