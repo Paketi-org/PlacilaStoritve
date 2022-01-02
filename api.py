@@ -13,6 +13,7 @@ import json
 import grpc
 import unary_pb2_grpc as pb2_grpc
 import unary_pb2 as pb2
+import socket
 
 app = Flask(__name__)
 
@@ -38,15 +39,17 @@ custom_format = {
   'name': '%(name_of_service)s',
   'method': '%(crud_method)s',
   'traffic': '%(directions)s',
-  'type': '%(levelname)s',
+  'ip': '%(ip_node)s',
+  'status': '%(status)s',
+  'code': '%(http_code)s',
 }
 logging.basicConfig(level=logging.INFO)
-l = logging.getLogger('fluent.test')
+l = logging.getLogger('Placila')
 h = handler.FluentHandler('Placila', host=app.config["FLUENT_IP"], port=int(app.config["FLUENT_PORT"]))
 formatter = handler.FluentRecordFormatter(custom_format)
 h.setFormatter(formatter)
 l.addHandler(h)
-l.info("Pripravljanje Placila Mikrostoritve", extra={"name_of_service": "Placila", "crud_method": None, "directions": None})
+l.info("Pripravljanje Placila Mikrostoritve", extra={"name_of_service": "Placila", "crud_method": None, "directions": None, "ip_node": None, "status": None, "http_code": None})
 
 api = Api(app, version='1.0', doc='/openapi', title='Placila API', description='Abstrakt Placila API',default_swagger_filename='openapi.json', default='Placila CRUD', default_label='koncne tocke in operacije')
 placiloApiModel = api.model('ModelPlacila', {
@@ -139,10 +142,13 @@ class Placilo(Resource):
         """
         Vrni podatke placila glede na ID
         """
+        l.info("Zahtevaj placilo z ID %s" % str(id), extra={"name_of_service": "Placila", "crud_method": "get", "directions": "in", "ip_node": socket.gethostbyname(socket.gethostname()), "status": None, "http_code": None})
         self.cur.execute("SELECT * FROM placila WHERE id = %s" % str(id))
         row = self.cur.fetchall()
 
         if(len(row) == 0):
+            l.warning("Placilo z ID %s ni bil najden" % str(id), extra={"name_of_service": "Placila", "crud_method": "get", "directions": "out", "ip_node": socket.gethostbyname(socket.gethostname()), "status": "fail", "http_code": 404})
+
             abort(404)
 
         d = {}
@@ -157,6 +163,7 @@ class Placilo(Resource):
             znesek_coin = d["znesek_coin"], 
             status = d["status"].strip())
 
+        l.info("Vrni placilo z ID %s" % str(id), extra={"name_of_service": "Placila", "crud_method": "get", "directions": "out", "ip_node": socket.gethostbyname(socket.gethostname()), "status": None, "http_code": 200})
         return placilo, 200
 
     @marshal_with(placiloApiModel)
@@ -167,7 +174,7 @@ class Placilo(Resource):
         """
         Posodobi podatke placila glede na ID
         """
-        l.info("Posodobi placilo z ID %s" % str(id), extra={"name_of_service": "Placila", "crud_method": "put", "directions": "in"})
+        l.info("Posodobi placilo z ID %s" % str(id), extra={"name_of_service": "Placila", "crud_method": "put", "directions": "in", "ip_node": socket.gethostbyname(socket.gethostname()), "status": None, "http_code": None})
         args = self.parser.parse_args()
         attribute = args["atribut"]
         value = args["vrednost"]
@@ -178,6 +185,7 @@ class Placilo(Resource):
         row = self.cur.fetchall()
 
         if(len(row) == 0):
+            l.warning("Placilo z ID %s ni bil najden" % str(id), extra={"name_of_service": "Placila", "crud_method": "put", "directions": "out", "ip_node": socket.gethostbyname(socket.gethostname()), "status": "fail", "http_code": 404})
             abort(404)
 
         d = {}
@@ -192,6 +200,8 @@ class Placilo(Resource):
             znesek_coin = d["znesek_coin"],
             status = d["status"].strip())
 
+        l.info("Placilo z ID %s posodobljeno" % str(id), extra={"name_of_service": "Placila", "crud_method": "put", "directions": "out", "ip_node": socket.gethostbyname(socket.gethostname()), "status": "success", "http_code": 200})
+
         return placilo, 200
 
     @ns.doc("Izbrisi placilo")
@@ -201,6 +211,7 @@ class Placilo(Resource):
         '''
         Izbrisi placilo glede na ID
         '''
+        l.info("Izbrisi placilo z ID %s" % str(id), extra={"name_of_service": "Placila", "crud_method": "delete", "directions": "in", "ip_node": socket.gethostbyname(socket.gethostname()), "status": None, "http_code": None})
         self.cur.execute("SELECT * FROM placila")
         rows = self.cur.fetchall()
         ids = []
@@ -208,12 +219,14 @@ class Placilo(Resource):
             ids.append(row[0])
 
         if id not in ids:
+            l.warning("Placilo z ID %s ni bil najden" % str(id), extra={"name_of_service": "Placila", "crud_method": "delete", "directions": "out", "ip_node": socket.gethostbyname(socket.gethostname()), "status": "fail", "http_code": 404})
             abort(404)
         else:
             self.cur.execute("DELETE FROM placila WHERE id = %s" % str(id))
             self.conn.commit()
             
-        return 201
+        l.info("Placilo z ID %s izbrisano" % str(id), extra={"name_of_service": "Placila", "crud_method": "delete", "directions": "out", "ip_node": socket.gethostbyname(socket.gethostname()), "status": "success", "http_code": 204})
+        return 204
 
 class ListPlacil(Resource):
     def __init__(self, *args, **kwargs):
@@ -247,6 +260,7 @@ class ListPlacil(Resource):
         '''
         Vrni vsa placila
         '''
+        l.info("Zahtevaj placila", extra={"name_of_service": "Placila", "crud_method": "get", "directions": "in", "ip_node": socket.gethostbyname(socket.gethostname()), "status": None, "http_code": None})
         self.cur.execute("SELECT * FROM placila")
         rows = self.cur.fetchall()
         ds = {}
@@ -268,6 +282,7 @@ class ListPlacil(Resource):
                 status = ds[d]["status"].strip())
             placila.append(placilo)
 
+        l.info("Vrni placila", extra={"name_of_service": "Placila", "crud_method": "get", "directions": "out", "ip_node": socket.gethostbyname(socket.gethostname()), "status": "success", "http_code": 200})
         return {"placila": placila}, 200
 
     @marshal_with(placiloApiModel)
@@ -277,6 +292,7 @@ class ListPlacil(Resource):
         '''
         Dodaj novo placilo
         '''
+        l.info("Dodaj placilo", extra={"name_of_service": "Placila", "crud_method": "post", "directions": "in", "ip_node": socket.gethostbyname(socket.gethostname()), "status": None, "http_code": None})
         args = self.parser.parse_args()
         values = []
         for a in args.values():
@@ -297,6 +313,7 @@ class ListPlacil(Resource):
             znesek_coin = bitcoins,
             status = args["status"].strip())
 
+        l.info("Placilo dodano", extra={"name_of_service": "Placila", "crud_method": "post", "directions": "out", "ip_node": socket.gethostbyname(socket.gethostname()), "status": "success", "http_code": 201})
         return placilo, 201 
 
 
