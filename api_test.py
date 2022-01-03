@@ -5,11 +5,11 @@ import requests
 class TestAPI(unittest.TestCase):
 
     def setUp(self):
-        self.placila = "http://172.25.1.5:5002/"
+        self.placila = "http://localhost:5002/"
         self.maxDiff = None
 
     def test_1_post_placila(self):
-        resp = requests.post(self.placila + "/placila", {"id": 1, "id_placnika": 2, "id_prejemnika": 3, "status": "neplacano"})
+        resp = requests.post(self.placila + "/placila", {"id": 1, "id_placnika": 2, "id_prejemnika": 3, "znesek_eur": "10.00", "status": "neplacano"})
         self.assertEqual(resp.status_code, 201)
 
     def test_2_put_placila(self):

@@ -298,8 +298,10 @@ class ListPlacil(Resource):
         for a in args.values():
             values.append(a)
 
+        l.info("Pretvori v bitcoin", extra={"name_of_service": "Placila", "crud_method": "post", "directions": "out", "ip_node": socket.gethostbyname(socket.gethostname()), "status": None, "http_code": None})
         bitcoins = str(get_bitcoins(args["znesek_eur"]))
         bitcoins = bitcoins[10:17]
+        l.info("Pretvorjeno v bitcoine", extra={"name_of_service": "Placila", "crud_method": "post", "directions": "in", "ip_node": socket.gethostbyname(socket.gethostname()), "status": "success", "http_code": None})
         values.insert(4, bitcoins)
         self.cur.execute('''INSERT INTO {0} (id, id_placnika, id_prejemnika, znesek_eur, znesek_coin, status)
                 VALUES ({1}, {2}, {3}, '{4}', '{5}', '{6}')'''.format('placila', *values))
