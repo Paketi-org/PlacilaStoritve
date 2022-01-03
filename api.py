@@ -51,7 +51,7 @@ h.setFormatter(formatter)
 l.addHandler(h)
 l.info("Pripravljanje Placila Mikrostoritve", extra={"name_of_service": "Placila", "crud_method": None, "directions": None, "ip_node": None, "status": None, "http_code": None})
 
-api = Api(app, version='1.0', doc='/openapi', title='Placila API', description='Abstrakt Placila API',default_swagger_filename='openapi.json', default='Placila CRUD', default_label='koncne tocke in operacije')
+api = Api(app, version='1.0', doc='/placila/openapi', title='Placila API', description='Abstrakt Placila API',default_swagger_filename='openapi.json', default='Placila CRUD', default_label='koncne tocke in operacije')
 placiloApiModel = api.model('ModelPlacila', {
     "id": fields.Integer(readonly=True, description='ID placila'),
     "id_placnika": fields.Integer(readonly=True, description='ID placnika placila'),
