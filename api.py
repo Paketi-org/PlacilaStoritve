@@ -84,7 +84,7 @@ def connect_to_database():
                       port=app.config["DATABASE_PORT"], host=app.config["DATABASE_IP"])
 
 def check_database_connection():
-    conn = connect_too_database()
+    conn = connect_to_database()
     if conn.poll() == extensions.POLL_OK:
         print ("POLL: POLL_OK")
     elif conn.poll() == extensions.POLL_READ:
