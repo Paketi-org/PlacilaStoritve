@@ -241,9 +241,9 @@ class ListPlacil(Resource):
                            id INT NOT NULL,
                            id_placnika INT NOT NULL,
                            id_prejemnika INT NOT NULL,
-                           znesek_eur CHAR(10),
-                           znesek_coin CHAR(10),
-                           status CHAR(10)
+                           znesek_eur CHAR(20),
+                           znesek_coin CHAR(20),
+                           status CHAR(20)
                         )''')
         self.parser = reqparse.RequestParser()
         self.parser.add_argument("id", type=int, required=True, help="ID plačila je obvezen")
