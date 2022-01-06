@@ -15,6 +15,7 @@ flask-restx = "*"
 grpcio = "*"
 flask-unittest = "*"
 grpcio-tools = "*"
+requests = "*"
 
 [dev-packages]
 
