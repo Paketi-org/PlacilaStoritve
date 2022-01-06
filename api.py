@@ -14,6 +14,7 @@ import grpc
 import unary_pb2_grpc as pb2_grpc
 import unary_pb2 as pb2
 import socket
+import requests
 
 app = Flask(__name__)
 
@@ -186,6 +187,7 @@ class Placilo(Resource):
                            status CHAR(20)
                         )"""
             )
+        self.aktivni_prevozi = app.config["AKTIVNI_IP"]
 
         self.parser = reqparse.RequestParser()
         self.parser.add_argument("id", type=int)
@@ -305,11 +307,22 @@ class Placilo(Resource):
                     "http_code": 404,
                 },
             )
-            abort(404)
+            abort(410, f"Placilo z {id} ni najdeno!")
 
         d = {}
         for el, k in zip(row[0], placilaPolja):
             d[k] = el
+
+        if attribute == "status" and value == "placano":
+            # Zbrisi prevoz
+            resp = requests.get(self.aktivni_prevozi + "aktivni_prevozi/" + str(id))
+            if resp.status_code != 200:
+                abort(411, f"Placilo ne more bit placano, saj prevoz {id} ne obstaja")
+            prevoz = resp.json()
+            if "Da" not in prevoz["prejeto"]:
+                abort(412, f"Prevoz {id}še ni bil dostavljen, počakajte s plačilom!")
+            
+            requests.delete(self.aktivni_prevozi + "aktivni_prevozi/" + str(id))
 
         placilo = PlaciloModel(
             id=d["id"],
@@ -371,9 +384,8 @@ class Placilo(Resource):
                 },
             )
             abort(404)
-        else:
-            self.cur.execute("DELETE FROM placila WHERE id = %s" % str(id))
-            self.conn.commit()
+        self.cur.execute("DELETE FROM placila WHERE id = %s" % str(id))
+        self.conn.commit()
 
         l.info(
             "Placilo z ID %s izbrisano" % str(id),
@@ -386,6 +398,7 @@ class Placilo(Resource):
                 "http_code": 204,
             },
         )
+
         return 204
 
 
