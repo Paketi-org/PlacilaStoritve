@@ -169,6 +169,23 @@ class Placilo(Resource):
         self.table_name = "placila"
         self.conn = connect_to_database()
         self.cur = self.conn.cursor()
+        self.cur.execute(
+            "select exists(select * from information_schema.tables where table_name=%s)",
+            (self.table_name,),
+        )
+        if self.cur.fetchone()[0]:
+            print("Table {0} already exists".format(self.table_name))
+        else:
+            self.cur.execute(
+                """CREATE TABLE placila (
+                           id INT NOT NULL,
+                           id_placnika INT NOT NULL,
+                           id_prejemnika INT NOT NULL,
+                           znesek_eur CHAR(20),
+                           znesek_coin CHAR(20),
+                           status CHAR(20)
+                        )"""
+            )
 
         self.parser = reqparse.RequestParser()
         self.parser.add_argument("id", type=int)
