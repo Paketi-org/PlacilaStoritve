@@ -299,7 +299,7 @@ class Placilo(Resource):
         if attribute == "status" and value == "placano":
             # Zbrisi prevoz
             resp = requests.get(self.aktivni_prevozi + "aktivni_prevozi/" + str(id))
-            if resp.status != 200:
+            if resp.status_code != 200:
                 abort(411, f"Placilo ne more bit placano, saj prevoz {id} ne obstaja")
             prevoz = resp.json()
             if "Da" not in prevoz["prejeto"]:
