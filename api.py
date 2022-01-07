@@ -320,7 +320,7 @@ class Placilo(Resource):
                 abort(411, f"Placilo ne more bit placano, saj prevoz {id} ne obstaja")
             prevoz = resp.json()
             if "Da" not in prevoz["prejeto"]:
-                abort(412, f"Prevoz {id}še ni bil dostavljen, počakajte s plačilom!")
+                abort(412, f"Prevoz {id} se ni bil dostavljen, pocakajte s placilom!")
             
             requests.delete(self.aktivni_prevozi + "aktivni_prevozi/" + str(id))
 
